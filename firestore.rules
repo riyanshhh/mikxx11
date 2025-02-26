@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Check if the user is an admin
+    function isAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Admin collection rules
+    match /admins/{adminId} {
+      allow read: if request.auth != null;  // Allow read for authenticated users
+      allow write: if false;  // Only allow admin creation through backend
+    }
+    
+    // Models collection rules
+    match /models/{modelId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Applications collection rules
+    match /applications/{applicationId} {
+      allow read: if request.auth != null && (isAdmin() || request.auth.uid == resource.data.userId);
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+    
+    // Website collection rules
+    match /website/{document} {
+      allow read;
+      allow write: if isAdmin();
+    }
+    
+    // Blog collection rules
+    match /blog/{postId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+} 
